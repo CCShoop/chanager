@@ -3,7 +3,7 @@
 import os
 import logging
 from dotenv import load_dotenv
-from discord import app_commands, Interaction, Intents, Client, TextChannel, Guild, SelectOption
+from discord import app_commands, Interaction, Intents, Client, TextChannel, Guild, SelectOption, MessageType, Message
 from discord.ui import View, Select
 
 
@@ -68,6 +68,12 @@ client = ChanagerClient(intents=Intents.all())
 @client.event
 async def on_ready():
     logger.info(f"{client.user} is ready!")
+
+
+@client.event
+async def on_message(message: Message):
+    if message.type == MessageType.pins_add:
+        await message.delete()
 
 
 @client.tree.command(name="move", description="Move this channel to another category.")
