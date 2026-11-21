@@ -3,8 +3,7 @@
 import os
 import logging
 from dotenv import load_dotenv
-from discord import app_commands, Interaction, Intents, Client, TextChannel, Guild, SelectOption, MessageType, Message
-from discord.ui import View, Select
+from discord import app_commands, Interaction, Intents, Client, CategoryChannel, MessageType, Message
 
 
 # .env
@@ -25,31 +24,6 @@ console_handler.setFormatter(formatter)
 
 logger.addHandler(file_handler)
 logger.addHandler(console_handler)
-
-
-class CategoriesSelect(Select):
-    def __init__(self, channel: TextChannel, guild: Guild):
-        self.channel = channel
-        self.guild = guild
-        options = [SelectOption(label=category.name, value=str(category.id)) for category in self.guild.categories]
-        super().__init__(placeholder='Category', options=options)
-
-    async def callback(self, interaction: Interaction):
-        try:
-            selected_category_id = int(self.values[0])
-            logger.info(f"Category selected by {interaction.user}: {selected_category_id}")
-            selected_category = self.guild.get_channel(selected_category_id)
-            await self.channel.edit(category=selected_category)
-            await interaction.response.send_message(f"Channel moved to {selected_category.name}.", ephemeral=True)
-        except Exception as e:
-            logger.error(f"Failed to move channel: {e}")
-            await interaction.response.send_message(content=f"Could not move channel: {e}", ephemeral=True)
-
-
-class CategoriesSelectView(View):
-    def __init__(self, channel: TextChannel, guild: Guild):
-        super().__init__()
-        self.add_item(CategoriesSelect(channel, guild))
 
 
 class ChanagerClient(Client):
@@ -76,10 +50,16 @@ async def on_message(message: Message):
         await message.delete()
 
 
-@client.tree.command(name="move", description="Move this channel to another category.")
-async def move_command(interaction: Interaction):
-    logger.info(f"Received channel move request from {interaction.user.name}")
-    await interaction.response.send_message(content="Select a category for the channel to be moved into from the dropdown.", view=CategoriesSelectView(interaction.channel, interaction.guild), ephemeral=True)
+@client.tree.command(name="movechannel", description="Move this channel to another category.")
+@app_commands.describe(category="Category to move this channel into.")
+async def movechannel_command(interaction: Interaction, category: CategoryChannel):
+    logger.info(f"Received channel move request from {interaction.user.name}: {category.name} ({category.id})")
+    try:
+        await interaction.channel.edit(category=category)
+        await interaction.response.send_message(content=f"Channel moved to {category.name}.", ephemeral=True)
+    except Exception as e:
+        logger.error(f"Failed to move channel: {e}")
+        await interaction.response.send_message(content=f"Could not move channel: {e}", ephemeral=True)
 
 
 @client.tree.command(name="edit", description="Edit the name or topic of this channel.")
